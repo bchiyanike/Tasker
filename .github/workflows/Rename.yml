@@ -20,14 +20,14 @@ permissions:
 jobs:
   rename:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Validate inputs
         run: |
           OLD_NAME="${{ github.event.inputs.old_name }}"
@@ -140,7 +140,7 @@ jobs:
           echo "=== Verification Summary ==="
           echo ""
           
-          REMAINING=$(grep -r "com\.lionico\.$OLD_NAME" . --exclude-dir=.git --exclude="rename-template.yml" || echo "None found")
+          REMAINING=$(grep -r "com\.lionico\.$OLD_NAME" . --exclude-dir=.git --exclude="Rename.yml" || echo "None found")
           
           if [ "$REMAINING" != "None found" ]; then
             echo "Warning: Found remaining references"
@@ -168,12 +168,6 @@ jobs:
           OLD_NAME="${{ github.event.inputs.old_name }}"
           NEW_NAME="${{ github.event.inputs.new_name }}"
           
-          # Remove the workflow file before committing
-          if [ -f ".github/workflows/rename-template.yml" ]; then
-            git rm .github/workflows/rename-template.yml
-            echo "Workflow file marked for deletion"
-          fi
-          
           git add -A
           
           if git diff --staged --quiet; then
@@ -184,11 +178,10 @@ jobs:
 - Updated all Kotlin package declarations and imports
 - Updated Gradle applicationId and namespace  
 - Updated XML theme and string references
-- Renamed directory structure
-- Removed rename workflow"
+- Renamed directory structure"
             echo "Changes committed"
           fi
-      
+
       - name: Push changes
         run: |
           git push origin ${{ github.ref_name }}
