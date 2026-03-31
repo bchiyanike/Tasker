@@ -1,5 +1,5 @@
 // File: app/src/main/java/com/lionico/template/MainActivity.kt
-package com.lionico.template
+package com.lionico.tasker
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -15,7 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import com.lionico.template.ui.theme.LionicoTheme
+import com.lionico.tasker.ui.theme.LionicoTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

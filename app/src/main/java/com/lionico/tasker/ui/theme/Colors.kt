@@ -1,5 +1,5 @@
 // File: app/src/main/java/com/lionico/template/ui/theme/Colors.kt
-package com.lionico.template.ui.theme
+package com.lionico.tasker.ui.theme
 
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme

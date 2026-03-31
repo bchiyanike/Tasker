@@ -1,4 +1,4 @@
-package com.lionico.template
+package com.lionico.tasker
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp

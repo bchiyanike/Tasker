@@ -10,11 +10,11 @@ plugins {
 }
 
 android {
-    namespace = "com.lionico.template"
+    namespace = "com.lionico.tasker"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.lionico.template"
+        applicationId = "com.lionico.tasker"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
