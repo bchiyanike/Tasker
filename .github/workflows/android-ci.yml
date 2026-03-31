@@ -1,0 +1,93 @@
+name: Android APK Build (Template)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to build from"
+        required: true
+        default: "main"
+        type: string
+      build_type:
+        description: "Build variant"
+        required: true
+        default: "debug"
+        type: choice
+        options:
+          - debug
+          - release
+
+env:
+  APP_MODULE: app
+  JAVA_VERSION: 17
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Grant Gradle permissions
+        run: chmod +x ./gradlew
+
+      - name: Resolve branch name
+        id: branch
+        run: |
+          SAFE_BRANCH=$(echo "${{ inputs.branch }}" \
+            | tr '/' '-' \
+            | tr '[:upper:]' '[:lower:]' \
+            | cut -c1-50)
+          echo "name=$SAFE_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Build APK
+        run: |
+          if [ "${{ inputs.build_type }}" = "debug" ]; then
+            BUILD_TASK="app:assembleDebug"
+          else
+            BUILD_TASK="app:assembleRelease"
+          fi
+
+          echo "Running: $BUILD_TASK"
+          ./gradlew $BUILD_TASK --stacktrace
+
+      - name: Rename APK artifacts
+        run: |
+          OUTPUT_DIR="${{ env.APP_MODULE }}/build/outputs/apk/${{ inputs.build_type }}"
+          BRANCH="${{ steps.branch.outputs.name }}"
+
+          for apk in "$OUTPUT_DIR"/*.apk; do
+            [ -f "$apk" ] || continue
+            base=$(basename "$apk" .apk)
+            mv "$apk" "$OUTPUT_DIR/${base}-${BRANCH}.apk"
+          done
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ inputs.build_type }}-${{ steps.branch.outputs.name }}
+          path: |
+            ${{ env.APP_MODULE }}/build/outputs/apk/${{ inputs.build_type }}/*.apk
+            ${{ env.APP_MODULE }}/build/outputs/mapping/${{ inputs.build_type }}/**/mapping.txt
+          retention-days: 7
+
+      - name: Build summary
+        run: |
+          echo "✅ Build complete"
+          echo "Branch: ${{ inputs.branch }}"
+          echo "Variant: ${{ inputs.build_type }}"
+          echo "Artifacts:"
+          ls -lh ${{ env.APP_MODULE }}/build/outputs/apk/${{ inputs.build_type }}/*.apk

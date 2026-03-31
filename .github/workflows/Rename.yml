@@ -1,0 +1,210 @@
+name: Rename Template
+
+on:
+  workflow_dispatch:
+    inputs:
+      old_name:
+        description: 'Old package name'
+        required: true
+        default: 'template'
+      new_name:
+        description: 'New package name'
+        required: true
+      app_name:
+        description: 'New app display name'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  rename:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Validate inputs
+        run: |
+          OLD_NAME="${{ github.event.inputs.old_name }}"
+          NEW_NAME="${{ github.event.inputs.new_name }}"
+          APP_NAME="${{ github.event.inputs.app_name }}"
+          
+          if [ -z "$OLD_NAME" ] || [ -z "$NEW_NAME" ] || [ -z "$APP_NAME" ]; then
+            echo "Error: All inputs are required"
+            exit 1
+          fi
+          
+          echo "Old package name: $OLD_NAME"
+          echo "New package name: $NEW_NAME"
+          echo "App display name: $APP_NAME"
+      
+      - name: Rename package in Kotlin files
+        run: |
+          OLD_NAME="${{ github.event.inputs.old_name }}"
+          NEW_NAME="${{ github.event.inputs.new_name }}"
+          
+          echo "=== Renaming Kotlin files ==="
+          
+          find . -type f -name "*.kt" -exec sed -i "s/package com\.lionico\.$OLD_NAME/package com.lionico.$NEW_NAME/g" {} +
+          find . -type f -name "*.kt" -exec sed -i "s/import com\.lionico\.$OLD_NAME/import com.lionico.$NEW_NAME/g" {} +
+          
+          OLD_CAPITALIZED="$(echo $OLD_NAME | sed 's/./\U&/')"
+          NEW_CAPITALIZED="$(echo $NEW_NAME | sed 's/./\U&/')"
+          find . -type f -name "*.kt" -exec sed -i "s/${OLD_CAPITALIZED}Theme/${NEW_CAPITALIZED}Theme/g" {} +
+          
+          echo "Kotlin files updated"
+      
+      - name: Rename package in Gradle files
+        run: |
+          OLD_NAME="${{ github.event.inputs.old_name }}"
+          NEW_NAME="${{ github.event.inputs.new_name }}"
+          APP_NAME="${{ github.event.inputs.app_name }}"
+          
+          echo "=== Renaming Gradle files ==="
+          
+          find . -type f -name "build.gradle.kts" -exec sed -i "s/applicationId = \"com\.lionico\.$OLD_NAME\"/applicationId = \"com.lionico.$NEW_NAME\"/g" {} +
+          find . -type f -name "build.gradle.kts" -exec sed -i "s/namespace = \"com\.lionico\.$OLD_NAME\"/namespace = \"com.lionico.$NEW_NAME\"/g" {} +
+          
+          if [ -f "settings.gradle.kts" ]; then
+            sed -i "s/rootProject\.name = \".*\"/rootProject.name = \"$APP_NAME\"/g" settings.gradle.kts
+          fi
+          
+          echo "Gradle files updated"
+      
+      - name: Rename package in XML files
+        run: |
+          OLD_NAME="${{ github.event.inputs.old_name }}"
+          NEW_NAME="${{ github.event.inputs.new_name }}"
+          APP_NAME="${{ github.event.inputs.app_name }}"
+          
+          echo "=== Renaming XML files ==="
+          
+          OLD_CAPITALIZED="$(echo $OLD_NAME | sed 's/./\U&/')"
+          NEW_CAPITALIZED="$(echo $NEW_NAME | sed 's/./\U&/')"
+          
+          find . -type f -name "AndroidManifest.xml" -exec sed -i "s/@style\/Theme\.$OLD_NAME/@style\/Theme.$NEW_NAME/g" {} +
+          find . -type f -name "AndroidManifest.xml" -exec sed -i "s/@style\/Theme\.$OLD_CAPITALIZED/@style\/Theme.$NEW_CAPITALIZED/g" {} +
+          
+          find . -type f -name "themes.xml" -exec sed -i "s/name=\"Theme\.$OLD_NAME\"/name=\"Theme.$NEW_NAME\"/g" {} +
+          find . -type f -name "themes.xml" -exec sed -i "s/name=\"Theme\.$OLD_CAPITALIZED\"/name=\"Theme.$NEW_CAPITALIZED\"/g" {} +
+          
+          find . -type f -name "strings.xml" -exec sed -i "s/<string name=\"app_name\">.*<\/string>/<string name=\"app_name\">$APP_NAME<\/string>/g" {} +
+          
+          echo "XML files updated"
+      
+      - name: Rename directory structure
+        run: |
+          OLD_NAME="${{ github.event.inputs.old_name }}"
+          NEW_NAME="${{ github.event.inputs.new_name }}"
+          
+          echo "=== Renaming directory structure ==="
+          
+          OLD_DIR="app/src/main/java/com/lionico/$OLD_NAME"
+          NEW_DIR="app/src/main/java/com/lionico/$NEW_NAME"
+          
+          if [ -d "$OLD_DIR" ]; then
+            echo "Moving $OLD_DIR to $NEW_DIR"
+            mv "$OLD_DIR" "$NEW_DIR"
+          else
+            echo "Warning: $OLD_DIR not found"
+          fi
+          
+          OLD_TEST_DIR="app/src/androidTest/java/com/lionico/$OLD_NAME"
+          NEW_TEST_DIR="app/src/androidTest/java/com/lionico/$NEW_NAME"
+          
+          if [ -d "$OLD_TEST_DIR" ]; then
+            echo "Moving $OLD_TEST_DIR to $NEW_TEST_DIR"
+            mv "$OLD_TEST_DIR" "$NEW_TEST_DIR"
+          fi
+          
+          OLD_UNIT_DIR="app/src/test/java/com/lionico/$OLD_NAME"
+          NEW_UNIT_DIR="app/src/test/java/com/lionico/$NEW_NAME"
+          
+          if [ -d "$OLD_UNIT_DIR" ]; then
+            echo "Moving $OLD_UNIT_DIR to $NEW_UNIT_DIR"
+            mv "$OLD_UNIT_DIR" "$NEW_UNIT_DIR"
+          fi
+          
+          echo "Directory structure updated"
+      
+      - name: Verify changes
+        run: |
+          OLD_NAME="${{ github.event.inputs.old_name }}"
+          NEW_NAME="${{ github.event.inputs.new_name }}"
+          
+          echo "=== Verification Summary ==="
+          echo ""
+          
+          REMAINING=$(grep -r "com\.lionico\.$OLD_NAME" . --exclude-dir=.git --exclude="rename-template.yml" || echo "None found")
+          
+          if [ "$REMAINING" != "None found" ]; then
+            echo "Warning: Found remaining references"
+          else
+            echo "✅ No remaining references to old package"
+          fi
+          
+          if [ -d "app/src/main/java/com/lionico/$NEW_NAME" ]; then
+            echo "✅ New package directory exists"
+          else
+            echo "❌ Error: New package directory not found"
+            exit 1
+          fi
+          
+          NEW_REFS=$(grep -r "com\.lionico\.$NEW_NAME" app/src --include="*.kt" --include="*.xml" --include="*.kts" 2>/dev/null | wc -l)
+          echo "✅ Found $NEW_REFS references to new package"
+      
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+      
+      - name: Commit changes
+        run: |
+          OLD_NAME="${{ github.event.inputs.old_name }}"
+          NEW_NAME="${{ github.event.inputs.new_name }}"
+          
+          # Remove the workflow file before committing
+          if [ -f ".github/workflows/rename-template.yml" ]; then
+            git rm .github/workflows/rename-template.yml
+            echo "Workflow file marked for deletion"
+          fi
+          
+          git add -A
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Rename package from $OLD_NAME to $NEW_NAME
+
+- Updated all Kotlin package declarations and imports
+- Updated Gradle applicationId and namespace  
+- Updated XML theme and string references
+- Renamed directory structure
+- Removed rename workflow"
+            echo "Changes committed"
+          fi
+      
+      - name: Push changes
+        run: |
+          git push origin ${{ github.ref_name }}
+          echo "✅ Changes pushed"
+      
+      - name: Summary
+        run: |
+          echo "======================================"
+          echo "✅ RENAMING COMPLETED SUCCESSFULLY"
+          echo "======================================"
+          echo ""
+          echo "Package renamed from: ${{ github.event.inputs.old_name }}"
+          echo "Package renamed to: ${{ github.event.inputs.new_name }}"
+          echo "App name set to: ${{ github.event.inputs.app_name }}"
+          echo ""
+          echo "Next steps:"
+          echo "1. Pull changes: git pull"
+          echo "2. Build project: ./gradlew clean build"
+          echo "3. Run the app to verify"
