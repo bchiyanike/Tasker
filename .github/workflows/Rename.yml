@@ -173,12 +173,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Rename package from $OLD_NAME to $NEW_NAME
-
-- Updated all Kotlin package declarations and imports
-- Updated Gradle applicationId and namespace  
-- Updated XML theme and string references
-- Renamed directory structure"
+            git commit -m "Rename package from $OLD_NAME to $NEW_NAME - Updated Kotlin packages, Gradle configs, XML themes, and directory structure"
             echo "Changes committed"
           fi
 
